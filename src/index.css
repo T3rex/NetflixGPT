@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@font-face {
+  font-family: "nt-regular";
+  src: url("../src/utils/netflix-sans-font/NetflixSans-Regular.otf");
+}
