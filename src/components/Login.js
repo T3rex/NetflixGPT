@@ -1,50 +1,144 @@
 import Header from "./Header";
 import { Background_IMG } from "../utils/config";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { checkValidData } from "../utils/validate";
+import { auth } from "../utils/firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { addUser } from "../utils/userSlice";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 
 const Login = () => {
   const [isSignIn, setisSignIn] = useState(true);
+  const [message, setMessage] = useState(null);
+  const email = useRef(null);
+  const password = useRef(null);
+  const username = useRef(null);
+  const repassword = useRef(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const toogleIsSignIn = () => {
     setisSignIn(!isSignIn);
   };
 
-  const handleClick = () => {};
+  const handleClick = () => {
+    const msg = checkValidData(
+      email?.current?.value,
+      password?.current?.value,
+      username?.current?.value,
+      repassword?.current?.value
+    );
+    setMessage(msg);
+    if (msg) return;
+    if (!isSignIn) {
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          // Signed in
+          updateProfile(userCredential.user, {
+            displayName: username.current.value,
+            photoURL: "https://avatars.githubusercontent.com/u/37626566?v=4",
+          })
+            .then(() => {
+              // Profile updated!
+              const { uid, email, displayName, photoURL } = auth.currentUser;
+              dispatch(addUser({ uid, email, displayName, photoURL }));
+              // ...
+            })
+            .catch((error) => {
+              // An error occurred
+              // ...
+            });
+
+          navigate("/browse");
+          // ...
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setMessage(errorCode + " " + errorMessage);
+          // ..
+        });
+    } else {
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          // Signed in
+
+          navigate("/browse");
+          // ...
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setMessage(errorCode + errorMessage);
+        });
+    }
+  };
 
   return (
     <div className="">
-      <div className="absolute w-screen h-screen z-10 bg-black opacity-60"></div>
+      <div className="absolute w-screen h-screen z-10 bg-black opacity-50"></div>
       <Header />
       <img
-        className="w-screen h-screen absolute "
+        className="w-screen  h-screen absolute "
         src={Background_IMG}
-        alt="background-image"
+        alt="background"
       />
-      <div className=" absolute bg-black p-14 w-3/12 h-10/12 z-10 bg-opacity-70 mx-auto left-0 right-0 bottom-20 top-20 font-regular">
-        <form className="flex flex-col">
-          <h1 className="p-3 text-white text-3xl font-semibold my-4">
+      <div className=" absolute bg-black p-14 w-3/12 min-h-fit z-10 bg-opacity-70 mx-auto left-0 right-0 bottom-20 top-20 font-regular">
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col text-white"
+        >
+          <h1 className="p-3 text-3xl font-semibold my-4">
             {isSignIn ? "Sign In" : "Sign up"}
           </h1>
           {!isSignIn && (
             <input
-              className="p-3 m-2 w-full bg-[#333] rounded-s text-white text-lg"
-              type="email"
+              ref={username}
+              className="p-3 m-2 w-full bg-[#333] rounded-stext-lg"
+              type="text"
               placeholder="Name"
+              required
             />
           )}
           <input
-            className="p-3 m-2 w-full bg-[#333] rounded-s text-white text-lg"
-            type="email"
+            ref={email}
+            className="p-3 m-2 w-full bg-[#333] rounded-s text-lg"
+            type="text"
             placeholder="Email of phone number"
+            required
           />
           <input
-            className="p-3 m-2  w-full bg-[#333] text-white rounded-s text-lg"
+            ref={password}
+            className="p-3 m-2  w-full bg-[#333] rounded-s text-lg"
             type="password"
             placeholder="Password"
+            required
           />
-
+          {!isSignIn && (
+            <input
+              ref={repassword}
+              className="p-3 m-2  w-full bg-[#333] rounded-s text-lg"
+              type="password"
+              placeholder="Renter Password"
+              required
+            />
+          )}
+          {message && <p className="text-yellow-400 p-3">{message}</p>}
           <button
-            className="p-3 mx-2 mt-10 text-white font-bold text-lg rounded-md w-full
+            className="p-3 mx-2 mt-10 font-bold text-lg rounded-md w-full
             bg-[#e50914] font-regular"
             onClick={handleClick}
           >
@@ -56,13 +150,11 @@ const Login = () => {
               className="w-10 indeterminate:bg-white checked:bg-green-500 mr-0"
               type="checkbox"
             />
-            <label className="text-white font-thin text-sm ml-0">
-              Remember me
-            </label>
-            <p className="text-white font-thin text-sm ml-auto">Need help?</p>
+            <label className=" font-thin text-sm ml-0">Remember me</label>
+            <p className="font-thin text-sm ml-auto">Need help?</p>
           </div>
           {isSignIn ? (
-            <p className="text-white  text-md mt-10 p-4">
+            <p className=" text-md mt-10 p-4">
               New to Netflix?{" "}
               <span
                 className="font-bold cursor-pointer hover:underline"
@@ -72,7 +164,7 @@ const Login = () => {
               </span>
             </p>
           ) : (
-            <p className="text-white  text-md mt-10 p-4">
+            <p className="  text-md mt-10 p-4">
               Already signed up?{" "}
               <span
                 className="font-bold cursor-pointer hover:underline"
@@ -84,9 +176,12 @@ const Login = () => {
           )}
           {isSignIn && (
             <div>
-              <p className="text-white  text-xs  p-4 font-thin">
+              <p className=" text-xs  p-4 font-thin">
                 This page is protected by Google reCAPTCHA to ensure you're not
-                a bot. <a className="text-blue-500">Learn more.</a>
+                a bot.{" "}
+                <a className="text-blue-500" href="/">
+                  Learn more.
+                </a>
               </p>
             </div>
           )}
